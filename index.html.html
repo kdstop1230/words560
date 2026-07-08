@@ -45,7 +45,7 @@
             <div class="space-y-4 text-left">
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">5자리 학번 입력</label>
-                    <input type="text" v-model="loginId" placeholder="예: 10101" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm bg-slate-50">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="studentLoginIdInput" v-model="loginId" placeholder="예: 10101" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm bg-slate-50">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호 (초기: 학번!!)</label>
@@ -534,7 +534,6 @@
 <script>
 const { createApp } = Vue;
 
-// 🔗 [필수 설정] 파이어베이스 연결 정보 구성
 const firebaseConfig = {
   apiKey: "AIzaSyC-UtUHvp4NZPFaxIUIkAL89q2RcleSGyE",
   authDomain: "words560-646a2.firebaseapp.com",
@@ -543,7 +542,7 @@ const firebaseConfig = {
   messagingSenderId: "366783333850",
   appId: "1:366783333850:web:02c9e7da7174656089ace3"
 };
-// 파이어베이스 및 파이어스토어 엔진 가동
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -562,7 +561,7 @@ createApp({
 
             studentInfo: { id: '', name: '' },
             studentDatabase: {},
-            selectedStudents: [], // 다중 선택 삭제용 바인딩 배열 추가
+            selectedStudents: [], 
 
             words: [
                 { id: 1, no: 1, eng: 'insecurity', pos: '명사', kor: '불안(감), 불안정', syn: 'anxiety, uncertainty', ant: 'security, confidence' },
@@ -614,12 +613,20 @@ createApp({
         }
     },
     async mounted() {
-        // 교사용 내부 비밀번호 설정 로드
+        // 🔒 [보안 패치] 소스코드 임의 변조 및 무단 불법 다운로드 배포 구동을 방지하는 도메인 잠금(Domain Lock)
+        const allowedHosts = ["kdstop1230.github.io", "localhost", "127.0.0.1"];
+        if (!allowedHosts.includes(window.location.hostname)) {
+            alert("🚨 보안 경고: 승인되지 않은 환경 또는 변조된 소스코드에서의 접근이 감지되었습니다. 클라우드 통신 및 데이터베이스 연동이 차단됩니다.");
+            this.studentDatabase = {};
+            this.words = [];
+            this.currentView = 'student_login';
+            return;
+        }
+
         const localTeacherPw = localStorage.getItem('school_db_teacher_pw');
         if (localTeacherPw) this.teacherPassword = localTeacherPw;
 
         try {
-            // 🌐 클라우드에서 실시간 단어장 정보 바인딩
             const wordsDoc = await db.collection('school_master').doc('words').get();
             if (wordsDoc.exists && wordsDoc.data().list) {
                 this.words = wordsDoc.data().list;
@@ -640,8 +647,6 @@ createApp({
                 await db.collection('school_master').doc('words').set({ list: this.words });
             }
 
-            // 🌐 [중요] 일방적 get 방식에서 onSnapshot 실시간 스트리밍 동기화로 전환
-            // 이로 인해 학생들이 외부에서 기재한 비번/실명이 교사 대시보드에 실시간으로 끊김 없이 박힙니다.
             db.collection('school_master').doc('students').onSnapshot((doc) => {
                 if (doc.exists && doc.data().db) {
                     this.studentDatabase = doc.data().db;
@@ -677,10 +682,22 @@ createApp({
             }
         },
         async handleStudentLogin() {
-            const sId = this.loginId.trim();
-            if (!/^\d{5}$/.test(sId)) return alert('학번은 숫자 5자리여야 합니다.');
+            // [오류 해결 완화 패치] 모바일 기기의 가상 키보드 동기화 씹힘 및 텍스트 조합 지연 현상을 극복하기 위해 DOM 값을 직접 강제 파싱합니다.
+            const rawInput = document.getElementById('studentLoginIdInput')?.value || this.loginId;
+            let sId = rawInput.toString().trim();
+            
+            sId = sId.replace(/[０-９]/g, function(s) {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            });
+            sId = sId.replace(/\D/g, ''); // 숫자 이외의 모든 문자(숨겨진 특수 제어 공백, 영문 오타 등) 일괄 삭제
 
-            // [안정화 패치] 동기화 딜레이 오류 해결: 로그인 버튼 클릭 시 최신 DB 스냅샷 강제 Await 로드
+            // 실시간 정제된 결과를 인풋창 데이터에 동기화하여 학생이 입력 상태를 시각적으로 즉시 식별하도록 변경
+            this.loginId = sId;
+
+            if (!/^\d{5}$/.test(sId)) {
+                return alert(`학번 입력 오류: 현재 시스템이 [${sId || '공백'}]으로 처리했습니다.\n학번은 반드시 '10101'과 같이 정확히 '숫자 5자리'여야 합니다. 잘못된 문자나 6자리 이상의 숫자가 들어갔는지 확인해 주세요.`);
+            }
+
             try {
                 const studentsDoc = await db.collection('school_master').doc('students').get();
                 if (studentsDoc.exists && studentsDoc.data().db) {
@@ -724,7 +741,6 @@ createApp({
                 return alert('성명과 변경할 비밀번호를 정확히 기재해 주세요.');
             }
             
-            // [안정화 패치] 저장 시점에 다른 동시 접속자 학생 정보가 덮어씌워져 유실되지 않도록 마스터 병합 처리
             try {
                 const studentsDoc = await db.collection('school_master').doc('students').get();
                 if (studentsDoc.exists && studentsDoc.data().db) {
@@ -1031,7 +1047,6 @@ createApp({
                 await this.syncStudentDb();
             }
         },
-        // 🆕 [기능 추가] 선택된 특정 학생들 다중 일괄 삭제
         async deleteSelectedStudents() {
             if (this.selectedStudents.length === 0) {
                 return alert('선택 보관소 체크박스에 체크된 학생이 단 한 명도 없습니다.');
@@ -1041,11 +1056,10 @@ createApp({
                     delete this.studentDatabase[id];
                 });
                 await this.syncStudentDb();
-                this.selectedStudents = []; // 선택 내역 리셋
+                this.selectedStudents = []; 
                 alert('요청하신 학생 계정들이 안전하게 삭제 정리되었습니다.');
             }
         },
-        // 🆕 [기능 추가] 전체 등록 학생 DB 한꺼번에 포맷 및 초기화
         async clearAllStudents() {
             if (confirm('🚨 [핵심 경고] 등록된 전체 학생 데이터를 조건 없이 한꺼번에 영구 삭제하시겠습니까?\n이 작업 수행 시 학생들의 모든 비밀번호와 이수 성적 내역이 완전히 증발하며, 복구할 수 없습니다.')) {
                 if (confirm('최종 승인 단계: 정말로 전부 초기화하시겠습니까?')) {
@@ -1070,7 +1084,6 @@ createApp({
                 }
             }
         },
-        // 🌐 학생 디비 정보 클라우드 전송 함수
         async syncStudentDb() {
             try {
                 await db.collection('school_master').doc('students').set({ db: this.studentDatabase });
@@ -1078,7 +1091,6 @@ createApp({
                 console.error("학생 정보 클라우드 전송 실패:", error);
             }
         },
-        // 🌐 단어 마스터 레코드 정보 클라우드 전송 함수
         async syncWordsDb() {
             try {
                 await db.collection('school_master').doc('words').set({ list: this.words });
