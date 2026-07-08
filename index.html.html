@@ -392,15 +392,20 @@
                 </div>
 
                 <div class="bg-white p-5 rounded-2xl border border-indigo-200 shadow-md space-y-3">
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
                         <h3 class="text-sm font-black text-indigo-900 flex items-center gap-1">🔑 학생 회원 자격 및 계정 정보 보관소</h3>
-                        <button @click="manualCreateStudent" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-100">+ 신규 학생 수동 계정 생성</button>
+                        <div class="flex gap-2 flex-wrap">
+                            <button @click="manualCreateStudent" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-indigo-100">+ 신규 계정 생성</button>
+                            <button @click="deleteSelectedStudents" class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-rose-100">🗑️ 선택 삭제</button>
+                            <button @click="clearAllStudents" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold hover:bg-red-700">💥 전체 초기화</button>
+                        </div>
                     </div>
                     <p class="text-xs text-slate-400">초기 패스워드에서 변경한 학생의 실제 암호가 실시간 연동되어 표기됩니다.</p>
                     <div class="overflow-x-auto border rounded-xl">
                         <table class="w-full text-left border-collapse text-xs min-w-[600px]">
                             <thead>
                                 <tr class="bg-indigo-50 text-indigo-900 font-bold border-b border-indigo-100">
+                                    <th class="p-3 w-12 text-center">선택</th>
                                     <th class="p-3">순번</th>
                                     <th class="p-3">로그인 ID (학번 5자리)</th>
                                     <th class="p-3">학생 성명</th>
@@ -411,6 +416,9 @@
                             </thead>
                             <tbody class="divide-y font-mono text-[11px] bg-white">
                                 <tr v-for="(info, id, index) in studentDatabase" :key="id" class="hover:bg-indigo-50/40">
+                                    <td class="p-3 text-center">
+                                        <input type="checkbox" :value="id" v-model="selectedStudents" class="w-4 h-4 accent-indigo-600 cursor-pointer">
+                                    </td>
                                     <td class="p-3 text-slate-400">{{ index + 1 }}</td>
                                     <td class="p-3 font-bold text-indigo-700 text-sm">{{ id }}</td>
                                     <td class="p-3 font-bold text-slate-800">{{ info.name }}</td>
@@ -426,7 +434,7 @@
                                     </td>
                                 </tr>
                                 <tr v-if="Object.keys(studentDatabase).length === 0">
-                                    <td colspan="6" class="p-6 text-center text-slate-400">등록된 학생 회원이 전무합니다. 학번으로 최초 접속 시 자동 빌드됩니다.</td>
+                                    <td colspan="7" class="p-6 text-center text-slate-400">등록된 학생 회원이 전무합니다. 학번으로 최초 접속 시 자동 빌드됩니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -526,7 +534,7 @@
 <script>
 const { createApp } = Vue;
 
-// 🔗 [필수 설정] 파이어베이스 연결 정보 구성 (선생님 계정 정보로 변경하세요!)
+// 🔗 [필수 설정] 파이어베이스 연결 정보 구성
 const firebaseConfig = {
   apiKey: "AIzaSyC-UtUHvp4NZPFaxIUIkAL89q2RcleSGyE",
   authDomain: "words560-646a2.firebaseapp.com",
@@ -554,7 +562,8 @@ createApp({
 
             studentInfo: { id: '', name: '' },
             studentDatabase: {},
-            
+            selectedStudents: [], // 다중 선택 삭제용 바인딩 배열 추가
+
             words: [
                 { id: 1, no: 1, eng: 'insecurity', pos: '명사', kor: '불안(감), 불안정', syn: 'anxiety, uncertainty', ant: 'security, confidence' },
                 { id: 2, no: 2, eng: 'influential', pos: '형용사', kor: '영향력 있는', syn: 'powerful, impactful', ant: 'insignificant' },
@@ -615,7 +624,6 @@ createApp({
             if (wordsDoc.exists && wordsDoc.data().list) {
                 this.words = wordsDoc.data().list;
             } else {
-                // 클라우드 레코드가 존재하지 않을 시 기본 45개 풀 빌드 후 최초 업로드
                 if (this.words.length < 40) {
                     for (let i = 5; i <= 45; i++) {
                         this.words.push({
@@ -632,11 +640,16 @@ createApp({
                 await db.collection('school_master').doc('words').set({ list: this.words });
             }
 
-            // 🌐 클라우드에서 실시간 학생 DB 전체 정보 바인딩
-            const studentsDoc = await db.collection('school_master').doc('students').get();
-            if (studentsDoc.exists && studentsDoc.data().db) {
-                this.studentDatabase = studentsDoc.data().db;
-            }
+            // 🌐 [중요] 일방적 get 방식에서 onSnapshot 실시간 스트리밍 동기화로 전환
+            // 이로 인해 학생들이 외부에서 기재한 비번/실명이 교사 대시보드에 실시간으로 끊김 없이 박힙니다.
+            db.collection('school_master').doc('students').onSnapshot((doc) => {
+                if (doc.exists && doc.data().db) {
+                    this.studentDatabase = doc.data().db;
+                }
+            }, (error) => {
+                console.error("학생 실시간 클라우드 스트리밍 실패:", error);
+            });
+
         } catch (error) {
             console.error("초기 클라우드 동기화 바인딩 실패:", error);
         }
@@ -663,9 +676,19 @@ createApp({
                 alert('교사 비밀번호가 성공적으로 변경되었습니다.');
             }
         },
-        handleStudentLogin() {
+        async handleStudentLogin() {
             const sId = this.loginId.trim();
             if (!/^\d{5}$/.test(sId)) return alert('학번은 숫자 5자리여야 합니다.');
+
+            // [안정화 패치] 동기화 딜레이 오류 해결: 로그인 버튼 클릭 시 최신 DB 스냅샷 강제 Await 로드
+            try {
+                const studentsDoc = await db.collection('school_master').doc('students').get();
+                if (studentsDoc.exists && studentsDoc.data().db) {
+                    this.studentDatabase = studentsDoc.data().db;
+                }
+            } catch (error) {
+                return alert('서버 연결이 원활하지 않습니다. 신호 확인 후 다시 눌러주세요.');
+            }
 
             if (!this.studentDatabase[sId]) {
                 this.studentDatabase[sId] = {
@@ -677,7 +700,7 @@ createApp({
                     lastActiveTime: '',
                     passCount: 0
                 };
-                this.syncStudentDb();
+                await this.syncStudentDb();
             }
 
             if (this.loginPw !== this.studentDatabase[sId].password) {
@@ -695,16 +718,31 @@ createApp({
             }
             this.clearAuthInputs();
         },
-        saveNewPassword() {
+        async saveNewPassword() {
             const sId = this.studentInfo.id;
             if (!this.studentInfo.name.trim() || this.newPassword.trim().length < 2) {
                 return alert('성명과 변경할 비밀번호를 정확히 기재해 주세요.');
             }
+            
+            // [안정화 패치] 저장 시점에 다른 동시 접속자 학생 정보가 덮어씌워져 유실되지 않도록 마스터 병합 처리
+            try {
+                const studentsDoc = await db.collection('school_master').doc('students').get();
+                if (studentsDoc.exists && studentsDoc.data().db) {
+                    this.studentDatabase = studentsDoc.data().db;
+                }
+            } catch (error) {
+                return alert('암호 변경 트랜잭션 오류. 다시 시도하십시오.');
+            }
+
+            if (!this.studentDatabase[sId]) {
+                this.studentDatabase[sId] = {};
+            }
+
             this.studentDatabase[sId].name = this.studentInfo.name.trim();
             this.studentDatabase[sId].password = this.newPassword.trim();
             this.studentDatabase[sId].isInitial = false;
             
-            this.syncStudentDb();
+            await this.syncStudentDb();
             this.studentInfo.name = this.studentDatabase[sId].name;
             alert('정보가 등록되었습니다.');
             this.currentView = 'student_home';
@@ -719,11 +757,11 @@ createApp({
             }
             return this.studentDatabase[sId].progress[rangeKey];
         },
-        resetCurrentRangeSequence() {
+        async resetCurrentRangeSequence() {
             if(confirm('현재 설정 범위의 학습 이수 내역을 초기화하시겠습니까?')) {
                 const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
                 this.studentDatabase[this.studentInfo.id].progress[rangeKey] = { stage1: false, stage2: false, stage3: false, stage4: false };
-                this.syncStudentDb();
+                await this.syncStudentDb();
             }
         },
         handleStartNoChange() {
@@ -745,7 +783,7 @@ createApp({
             this.isCardFlipped = !this.isCardFlipped;
             this.speakText(this.activeTestWords[this.cardIdx].eng);
         },
-        navigateCard(direction) {
+        async navigateCard(direction) {
             this.isCardFlipped = false;
             let targetIdx = this.cardIdx + direction;
 
@@ -755,7 +793,7 @@ createApp({
             } else if (targetIdx >= this.activeTestWords.length) {
                 const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
                 this.studentDatabase[this.studentInfo.id].progress[rangeKey].stage1 = true;
-                this.syncStudentDb();
+                await this.syncStudentDb();
                 alert('🎉 1단계 학습을 완수했습니다! 다음 단계가 잠금 해제됩니다.');
                 this.currentView = 'student_home';
             }
@@ -820,7 +858,7 @@ createApp({
                 this.testOptions = [this.currentCorrectAnswerStr, ...distractors].sort(() => 0.5 - Math.random());
             }
         },
-        submitOptionChoice(chosen) {
+        async submitOptionChoice(chosen) {
             const currentItem = this.activeTestWords[this.testIdx];
             const sId = this.studentInfo.id;
             
@@ -859,7 +897,7 @@ createApp({
                         this.wrongCollectedWords.forEach(w => {
                             if (!this.studentDatabase[sId].wrongWordsByDate[dateKey].some(item => item.eng === w.eng)) {
                                 this.studentDatabase[sId].wrongWordsByDate[dateKey].push({
-                                    no: w.no, eng: w.eng, pos: w.pos, kor: w.kor, syn: w.syn, ant: w.ant
+                                    no: w.no, eng: w.eng, font: w.pos, kor: w.kor, syn: w.syn, ant: w.ant
                                 });
                             }
                         });
@@ -885,7 +923,7 @@ createApp({
                 }
 
                 this.stampActiveTimestamp();
-                this.syncStudentDb();
+                await this.syncStudentDb();
                 this.currentView = 'evaluation_report';
             }
         },
@@ -968,7 +1006,6 @@ createApp({
                 }
                 if (chunkContainer.length > 0) {
                     this.words = chunkContainer.sort((a,b) => a.no - b.no);
-                    // 🌐 로컬 저장 장치 대신 파이어베이스 클라우드로 동시 전송
                     await this.syncWordsDb();
                     this.configStartNo = 1;
                     this.configEndNo = Math.min(40, this.words.length);
@@ -980,28 +1017,52 @@ createApp({
             };
             reader.readAsText(file, 'UTF-8'); 
         },
-        manualCreateStudent() {
+        async manualCreateStudent() {
             const sId = prompt('생성할 학생의 5자리 학번 코드를 입력하세요.');
             if (!sId || !/^\d{5}$/.test(sId)) return alert('학번은 5자리 숫자만 가능합니다.');
             const sName = prompt('학생 성명을 입력하세요.');
             if (!sName) return;
             this.studentDatabase[sId] = { password: sId + '!!', name: sName, isInitial: false, progress: {}, wrongWordsByDate: {}, lastActiveTime: '', passCount: 0 };
-            this.syncStudentDb();
+            await this.syncStudentDb();
         },
-        purgeStudentAccount(id) {
+        async purgeStudentAccount(id) {
             if (confirm(`학번 [ ${id} ] 학생 정보를 시스템에서 영구 파기합니까?`)) {
                 delete this.studentDatabase[id];
-                this.syncStudentDb();
+                await this.syncStudentDb();
+            }
+        },
+        // 🆕 [기능 추가] 선택된 특정 학생들 다중 일괄 삭제
+        async deleteSelectedStudents() {
+            if (this.selectedStudents.length === 0) {
+                return alert('선택 보관소 체크박스에 체크된 학생이 단 한 명도 없습니다.');
+            }
+            if (confirm(`선택한 [ 총 ${this.selectedStudents.length}명 ]의 학적 자격을 완벽히 파기하고 계정을 일괄 삭제하시겠습니까?`)) {
+                this.selectedStudents.forEach(id => {
+                    delete this.studentDatabase[id];
+                });
+                await this.syncStudentDb();
+                this.selectedStudents = []; // 선택 내역 리셋
+                alert('요청하신 학생 계정들이 안전하게 삭제 정리되었습니다.');
+            }
+        },
+        // 🆕 [기능 추가] 전체 등록 학생 DB 한꺼번에 포맷 및 초기화
+        async clearAllStudents() {
+            if (confirm('🚨 [핵심 경고] 등록된 전체 학생 데이터를 조건 없이 한꺼번에 영구 삭제하시겠습니까?\n이 작업 수행 시 학생들의 모든 비밀번호와 이수 성적 내역이 완전히 증발하며, 복구할 수 없습니다.')) {
+                if (confirm('최종 승인 단계: 정말로 전부 초기화하시겠습니까?')) {
+                    this.studentDatabase = {};
+                    await this.syncStudentDb();
+                    this.selectedStudents = [];
+                    alert('서버 저장소의 모든 학생 계정 정보가 성공적으로 완전 초기화되었습니다.');
+                }
             }
         },
         async deleteWordToken(id) {
             this.words = this.words.filter(w => w.id !== id);
-            await this.syncWordsDb(); // 🌐 클라우드 데이터 실시간 동기화
+            await this.syncWordsDb(); 
         },
         async restoreMockTemplate() {
             if(confirm('중앙 어휘를 기본 샘플 4개 상태로 리셋하겠습니까?')) {
                 try {
-                    // 🌐 로컬이 아닌 파이어베이스 클라우드에서 단어 데이터를 삭제합니다.
                     await db.collection('school_master').doc('words').delete();
                     location.reload();
                 } catch (error) {
