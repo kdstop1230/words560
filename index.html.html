@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <meta class="no-print" name="apple-mobile-web-app-capable" content="yes">
+    <meta class="no-print" name="apple-mobile-web-app-status-bar-style" content="indigo-700">
+    <meta class="no-print" name="apple-mobile-web-app-title" content="단어마스터">
+    <meta class="no-print" name="mobile-web-app-capable" content="yes">
+    
+    <title>고1 영단어 560 마스터 v9.3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <style>
+        [v-cloak] { display: none !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; font-size: 12px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            th, td { border: 1px solid #1e293b !important; padding: 8px !important; text-align: left; }
+            th { background-color: #f1f5f9 !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 select-none antialiased">
+
+<div id="app" v-cloak>
+
+    <div v-if="['student_login', 'teacher_login', 'change_password'].includes(currentView)" class="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-100 p-4">
+        
+        <div v-if="currentView === 'student_login'" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-indigo-700 tracking-tight">🏫 고1 영단어 560 마스터</h2>
+                <p class="text-xs text-slate-400 mt-1.5">5자리 학번 코드로 로그인하세요.</p>
+            </div>
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">5자리 학번 입력</label>
+                    <input type="text" v-model="loginId" placeholder="예: 10101" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호 (초기: 학번!!)</label>
+                    <input type="password" v-model="loginPw" placeholder="••••••••" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-slate-50" @keyup.enter="handleStudentLogin">
+                </div>
+                <button @click="handleStudentLogin" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition shadow-md text-sm">학생 공간 입장</button>
+            </div>
+            <div class="pt-4 border-t border-slate-100">
+                <button @click="currentView = 'teacher_login'; clearAuthInputs();" class="text-xs text-slate-400 hover:text-indigo-600 font-medium underline transition">
+                    👨‍🏫 교과 관리자 로그인으로 전환
+                </button>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'teacher_login'" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-200 text-center space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">👨‍🏫 교사 통제 관리 모듈</h2>
+                <p class="text-xs text-slate-400 mt-1.5">교과 관리자 계정 정보를 입력하세요.</p>
+            </div>
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">교사 식별 ID</label>
+                    <input type="text" v-model="loginId" placeholder="ID 입력" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-800 font-mono text-sm bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">보안 패스워드</label>
+                    <input type="password" v-model="loginPw" placeholder="••••••••" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-800 text-sm bg-slate-50" @keyup.enter="handleTeacherLogin">
+                </div>
+                <button @click="handleTeacherLogin" class="w-full bg-slate-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition shadow-md text-sm">관리자 검증 및 입장</button>
+            </div>
+            <div class="pt-4 border-t border-slate-100">
+                <button @click="currentView = 'student_login'; clearAuthInputs();" class="text-xs text-slate-400 hover:text-indigo-600 font-medium underline transition">
+                    ◀ 학생 로그인으로 돌아가기
+                </button>
+            </div>
+        </div>
+
+        <div v-if="currentView === 'change_password'" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border text-center space-y-6">
+            <div>
+                <h2 class="text-xl font-bold text-slate-800">학적 정보 최초 등록</h2>
+                <p class="text-xs text-slate-400 mt-1">본인 확인을 위한 실명과 새 패스워드를 지정하십시오.</p>
+            </div>
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">학생 실명 성명</label>
+                    <input type="text" v-model="studentInfo.name" placeholder="예: 홍길동" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">보안 비밀번호 변경</label>
+                    <input type="password" v-model="newPassword" placeholder="새 암호 입력" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+                <button @click="saveNewPassword" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold transition text-sm shadow">정보 저장 및 마스터 허브 진입</button>
+            </div>
+        </div>
+    </div>
+
+    <div v-else class="min-h-screen flex flex-col bg-slate-50 text-slate-800">
+        
+        <header class="no-print bg-indigo-700 text-white p-4 shadow-md flex justify-between items-center sticky top-0 z-50">
+            <h1 class="text-base md:text-lg font-black flex items-center gap-2 cursor-pointer" @click="goHome">
+                🏫 고1 영단어 560 마스터 <span class="text-xs bg-indigo-900 px-2 py-0.5 rounded-md font-mono">v9.3</span>
+            </h1>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-semibold bg-indigo-800 px-3 py-1 rounded-full">
+                    {{ userRole === 'student' ? `학번: ${studentInfo.id} (${studentInfo.name})` : '👨‍🏫 최고 관리교사' }}
+                </span>
+                <button @click="logout" class="text-[11px] bg-red-500 hover:bg-red-600 px-2 py-1 rounded transition font-bold">로그아웃</button>
+            </div>
+        </header>
+
+        <main class="no-print flex-1 p-4 md:p-6 max-w-5xl w-full mx-auto flex flex-col justify-start">
+            
+            <div v-if="userRole === 'student'" class="w-full space-y-6">
+                
+                <div v-if="currentView === 'student_home'" class="space-y-6">
+                    <div class="bg-white p-5 rounded-2xl border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm">
+                        <div>
+                            <h2 class="text-lg font-black text-slate-900">🎯 안녕하세요, {{ studentInfo.name }} 학생!</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">1단계부터 4단계까지 순차적으로 이수해야 하며, 기준 미달 시 재도전이 필요합니다.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                            <button @click="currentView = 'student_wrongs_view'" class="bg-rose-100 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-rose-200 transition">📅 날짜별 오답노트 확인</button>
+                            <button @click="printVocabularySheet('words')" :disabled="!isValidRange" class="bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-black transition disabled:opacity-40">🖨️ 학습지 인쇄 / PDF 다운로드</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+                        <h3 class="text-xs font-bold text-indigo-700 tracking-wide uppercase">⚙️ 단어 학습 범위 설정 (최소 40개 권장)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">시작 단어 번호 (Start No.)</label>
+                                <input type="number" v-model.number="configStartNo" @input="handleStartNoChange" min="1" :max="words.length" class="w-full p-2.5 border rounded-xl text-xs font-bold font-mono bg-slate-50 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">종료 단어 번호 (End No.)</label>
+                                <input type="number" v-model.number="configEndNo" min="1" :max="words.length" class="w-full p-2.5 border rounded-xl text-xs font-bold font-mono bg-slate-50 outline-none">
+                            </div>
+                        </div>
+                        <div v-if="!isValidRange" class="text-xs font-bold text-rose-600 bg-rose-50 p-3 rounded-xl">
+                            ⚠️ 올바른 시작 및 종료 번호를 입력하십시오.
+                        </div>
+                        <div v-else class="text-xs font-bold text-emerald-600 bg-emerald-50 p-3 rounded-xl flex justify-between items-center flex-wrap gap-2">
+                            <span>✅ 현재 범위 수량: {{ rangeCount }}개 | 설정 범위에 맞춰 차례대로 이수하세요.</span>
+                            <button @click="resetCurrentRangeSequence" class="text-[10px] bg-white border border-emerald-300 text-emerald-700 px-2 py-0.5 rounded">진도 초기화</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <button @click="launchFlashcardMode" :disabled="!isValidRange" :class="!isValidRange ? 'opacity-40' : ''" class="bg-white border-2 border-indigo-100 p-5 rounded-2xl text-left shadow-sm flex flex-col justify-between h-40">
+                            <div class="w-full">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xl">🎴</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" v-if="getStageStatus().stage1">이수완료</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700" v-else">진행가능</span>
+                                </div>
+                                <h4 class="text-xs font-black text-slate-900 mt-2">1) 단어 학습 하기</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">범위 내 모든 단어를 암기합니다.</p>
+                            </div>
+                        </button>
+
+                        <button @click="launchTestMode(2)" :disabled="!isValidRange || !getStageStatus().stage1" :class="(!isValidRange || !getStageStatus().stage1) ? 'opacity-40 bg-slate-50' : ''" class="bg-white border p-5 rounded-2xl text-left shadow-sm flex flex-col justify-between h-40">
+                            <div class="w-full">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xl">🇰🇷</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" v-if="getStageStatus().stage2">Pass</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200" v-else>🔒 잠금</span>
+                                </div>
+                                <h4 class="text-xs font-black text-slate-900 mt-2">2) 한글 의미 고르기</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">영단어의 알맞은 뜻을 고릅니다.</p>
+                            </div>
+                        </button>
+
+                        <button @click="launchTestMode(3)" :disabled="!isValidRange || !getStageStatus().stage2" :class="(!isValidRange || !getStageStatus().stage2) ? 'opacity-40 bg-slate-50' : ''" class="bg-white border p-5 rounded-2xl text-left shadow-sm flex flex-col justify-between h-40">
+                            <div class="w-full">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xl">🇺🇸</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" v-if="getStageStatus().stage3">Pass</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200" v-else>🔒 잠금</span>
+                                </div>
+                                <h4 class="text-xs font-black text-slate-900 mt-2">3) 영어 단어 고르기</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">한글 뜻에 맞는 영단어를 고릅니다.</p>
+                            </div>
+                        </button>
+
+                        <button @click="launchTestMode(4)" :disabled="!isValidRange || !getStageStatus().stage3" :class="(!isValidRange || !getStageStatus().stage3) ? 'opacity-40 bg-slate-50' : ''" class="bg-white border p-5 rounded-2xl text-left shadow-sm flex flex-col justify-between h-40">
+                            <div class="w-full">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xl">🔗</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800" v-if="getStageStatus().stage4">최종이수</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200" v-else>🔒 잠금</span>
+                                </div>
+                                <h4 class="text-xs font-black text-slate-900 mt-2">4) 유의어 고르기</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">표제어의 알맞은 유의어를 고릅니다.</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="currentView === 'flashcard_player'" class="max-w-md w-full mx-auto space-y-4">
+                    <div class="flex justify-between items-center text-xs font-bold text-slate-400">
+                        <span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-mono">진행도: {{ cardIdx + 1 }} / {{ activeTestWords.length }}</span>
+                        <button @click="currentView = 'student_home'" class="bg-slate-800 text-white px-3 py-1 rounded-lg">🏠 메인</button>
+                    </div>
+                    <div class="bg-white h-64 rounded-2xl shadow-md border flex flex-col justify-center items-center cursor-pointer p-6" @click="handleCardTapAction">
+                        <div v-if="!isCardFlipped" class="text-center space-y-3">
+                            <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-bold font-mono">No. {{ activeTestWords[cardIdx].no }} [{{ activeTestWords[cardIdx].pos }}]</span>
+                            <p class="text-4xl font-black text-slate-900 font-mono tracking-tight">{{ activeTestWords[cardIdx].eng }}</p>
+                            <p class="text-[11px] text-indigo-500 font-bold bg-indigo-50 px-3 py-1 rounded-full inline-block">🔊 터치시 발음 듣기</p>
+                        </div>
+                        <div v-else class="text-center space-y-3">
+                            <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold">뜻/의미</span>
+                            <p class="text-2xl font-black text-indigo-600">{{ activeTestWords[cardIdx].kor }}</p>
+                            <p v-if="activeTestWords[cardIdx].syn" class="text-xs text-emerald-600 font-mono">유의어: {{ activeTestWords[cardIdx].syn }}</p>
+                            <p v-if="activeTestWords[cardIdx].ant" class="text-xs text-amber-600 font-mono">반의어: {{ activeTestWords[cardIdx].ant }}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button @click="navigateCard(-1)" :disabled="cardIdx === 0" class="flex-1 bg-slate-200 py-3 rounded-xl text-xs font-bold disabled:opacity-40">Previous</button>
+                        <button @click="navigateCard(1)" class="flex-1 bg-indigo-600 text-white py-3 rounded-xl text-xs font-bold">Next</button>
+                    </div>
+                </div>
+
+                <div v-if="currentView === 'evaluation_engine'" class="max-w-xl w-full mx-auto space-y-4">
+                    <div class="flex justify-between items-center text-xs font-bold">
+                        <span class="text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg">{{ reportMenuName }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full font-mono">문항: {{ testIdx + 1 }} / {{ activeTestWords.length }}</span>
+                            <button @click="currentView = 'student_home'" class="bg-slate-800 text-white px-3 py-1 rounded-lg">🏠 메인</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl border text-center space-y-2 shadow-sm">
+                        <span class="text-xs text-slate-400 block">No. {{ activeTestWords[testIdx].no }} [{{ activeTestWords[testIdx].pos }}]</span>
+                        <p v-if="testType === 2 || testType === 4" class="text-3xl font-black text-slate-800 font-mono">{{ activeTestWords[testIdx].eng }}</p>
+                        <p v-if="testType === 3" class="text-2xl font-black text-indigo-700">{{ activeTestWords[testIdx].kor }}</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button v-for="(option, idx) in testOptions" :key="idx" @click="submitOptionChoice(option)" class="bg-white hover:bg-slate-50 border p-3.5 rounded-xl text-left font-bold text-xs flex items-center gap-3">
+                            <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center font-mono text-[10px]">{{ idx + 1 }}</span>
+                            <span>{{ option }}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="currentView === 'evaluation_report'" class="max-w-md w-full mx-auto bg-white p-6 rounded-2xl border text-center space-y-6 shadow-md">
+                    <div>
+                        <h3 class="text-lg font-black text-slate-900">📊 테스트 평가 스코어</h3>
+                        <p class="text-xs text-slate-400 mt-1">{{ lastTestRangeStr }} ({{ reportMenuName }})</p>
+                    </div>
+                    <div class="inline-block p-6 rounded-full border-4" :class="passOrCutStatus ? 'border-emerald-500 text-emerald-600' : 'border-rose-500 text-rose-600'">
+                        <p class="text-4xl font-mono font-black">{{ lastEvaluationScore }}점</p>
+                        <p class="text-[11px] mt-1">정답수: {{ lastCorrectCount }} / {{ activeTestWords.length }}</p>
+                    </div>
+                    <div class="p-4 rounded-xl text-xs text-center" :class="passOrCutStatus ? 'bg-emerald-50 text-emerald-800' : 'bg-rose-50 text-rose-800'">
+                        <p class="font-bold">{{ passOrCutStatus ? '🎉 커트라인 통과! (80% 이상)' : '⚠️ 점수 미달로 인한 불합격 (80% 미만)' }}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button v-if="!passOrCutStatus" @click="retryCurrentTestSession" class="flex-1 bg-rose-600 text-white py-3 rounded-xl font-bold text-xs">🔄 다시 도전</button>
+                        <button @click="currentView = 'student_home'" class="flex-1 bg-slate-900 text-white py-3 rounded-xl font-bold text-xs">홈으로 이동</button>
+                    </div>
+                </div>
+
+                <div v-if="currentView === 'student_wrongs_view'" class="space-y-4">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <h2 class="text-base font-black text-slate-900">📅 개인 누적 오답노트 내역 (Pass 완료 건만 수록)</h2>
+                        <div class="flex gap-2">
+                            <button @click="printVocabularySheet('wrongs')" class="bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold">📄 오답노트 PDF 다운로드 / 인쇄</button>
+                            <button @click="currentView = 'student_home'" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold">🏠 메인</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border space-y-6">
+                        <div v-for="(wordsList, dateStr) in getStudentWrongCollection" :key="dateStr" class="border-b pb-4 last:border-b-0 last:pb-0">
+                            <h3 class="text-xs font-bold text-rose-600 mb-2">📌 최종 통과(Pass) 일자: {{ dateStr }}</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div v-for="w in wordsList" :key="w.eng" class="p-3 bg-slate-50 border rounded-xl font-mono text-xs">
+                                    <div class="flex justify-between font-bold text-slate-900">
+                                        <span>No.{{ w.no }} {{ w.eng }} <span class="text-slate-400">[{{ w.pos }}]</span></span>
+                                    </div>
+                                    <p class="text-slate-600 mt-1">뜻: {{ w.kor }}</p>
+                                    <p v-if="w.syn" class="text-emerald-600 text-[11px]">유의어: {{ w.syn }}</p>
+                                    <p v-if="w.ant" class="text-amber-600 text-[11px]">반의어: {{ w.ant }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="Object.keys(getStudentWrongCollection).length === 0" class="text-center py-8 text-xs text-slate-400">
+                            📭 최종 합격(Pass) 과정에서 발생한 오답 데이터가 없습니다.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div v-if="userRole === 'teacher'" class="w-full space-y-6">
+                
+                <div class="bg-white p-5 rounded-2xl border border-slate-300 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-base font-black text-slate-900">👨‍🏫 고1 영단어 560 마스터 통합 관리자 교무실</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">이수 현황 분석, 오답 아카이브 모니터링 및 학적 제어 컨트롤러</p>
+                    </div>
+                    <div class="w-full md:w-auto flex items-center gap-2">
+                        <button @click="changeTeacherPassword" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow transition">🔒 교사 비번 변경</button>
+                        <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow block text-center transition">
+                            📥 CSV 단어 목록 업로드 (.csv)
+                            <input type="file" class="hidden" accept=".csv" @change="parseUploadedCsv">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                    <h3 class="text-xs font-bold text-slate-700">👥 학생별 정방향 최종 이수 현황 및 오답 아카이브</h3>
+                    <div class="overflow-x-auto border rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 font-semibold border-b">
+                                    <th class="p-3">식별학번</th>
+                                    <th class="p-3">성명</th>
+                                    <th class="p-3">최종 학습 이수 일시</th>
+                                    <th class="p-3">학생별 최종 누적 오답 리스트 (최종 Pass 건만 취합)</th>
+                                    <th class="p-3 text-center">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y font-mono text-[11px]">
+                                <tr v-for="(info, id) in studentDatabase" :key="id" class="hover:bg-slate-50">
+                                    <td class="p-3 font-bold text-indigo-600">{{ id }}</td>
+                                    <td class="p-3 font-medium text-slate-800">{{ info.name }}</td>
+                                    <td class="p-3 text-slate-600 font-bold">{{ info.lastActiveTime || '기록 없음' }}</td>
+                                    <td class="p-3">
+                                        <div class="max-w-xs max-h-24 overflow-y-auto space-y-1 bg-slate-50 p-1.5 rounded border">
+                                            <div v-for="(wordsList, dateKey) in info.wrongWordsByDate" :key="dateKey" class="text-[10px]">
+                                                <span class="text-rose-600 font-bold">[{{ dateKey }}]</span> 
+                                                {{ wordsList.map(w => w.eng).join(', ') }}
+                                            </div>
+                                            <div v-if="!info.wrongWordsByDate || Object.keys(info.wrongWordsByDate).length === 0" class="text-[10px] text-slate-400">오답 없음</div>
+                                        </div>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <button @click="purgeStudentAccount(id)" class="text-rose-600 font-bold hover:underline">학적제외</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+                    <div class="flex justify-between items-center flex-wrap gap-2">
+                        <h3 class="text-xs font-bold text-slate-700">📚 중앙 등록 어휘 마스터 레코드 (총 {{ words.length }}개)</h3>
+                        <div class="flex gap-2">
+                            <button @click="downloadWordsExcel" class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-indigo-700 transition">📥 어휘 목록 Excel(CSV) 다운로드</button>
+                            <button @click="printVocabularySheet('all_words')" class="bg-slate-800 text-white px-3 py-1 rounded text-xs font-bold hover:bg-black transition">🖨️ 어휘 목록 PDF / 인쇄</button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto border rounded-xl max-h-80">
+                        <table class="w-full text-left border-collapse text-xs min-w-[750px]">
+                            <thead class="bg-slate-100 text-slate-600 font-bold sticky top-0 z-10 shadow-sm">
+                                <tr>
+                                    <th class="p-2.5">번호</th>
+                                    <th class="p-2.5">표제어(English)</th>
+                                    <th class="p-2.5">품사</th>
+                                    <th class="p-2.5">한글 의미(Meaning)</th>
+                                    <th class="p-2.5">유의어(Synonym)</th>
+                                    <th class="p-2.5">반의어(Antonym)</th>
+                                    <th class="p-2.5 text-center">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y bg-white font-mono text-[11px]">
+                                <tr v-for="w in words" :key="w.id" class="hover:bg-slate-50">
+                                    <td class="p-2 font-bold text-indigo-600">{{ w.no }}</td>
+                                    <td class="p-2 font-black text-slate-900 text-sm">{{ w.eng }}</td>
+                                    <td class="p-2 text-slate-500">{{ w.pos }}</td>
+                                    <td class="p-2 text-slate-800 font-medium">{{ w.kor }}</td>
+                                    <td class="p-2 text-emerald-600">{{ w.syn || '-' }}</td>
+                                    <td class="p-2 text-amber-600">{{ w.ant || '-' }}</td>
+                                    <td class="p-2 text-center">
+                                        <button @click="deleteWordToken(w.id)" class="text-rose-500 font-bold hover:underline">삭제</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-end">
+                        <button @click="restoreMockTemplate" class="text-[10px] text-slate-400 hover:underline">기본 4개 샘플 데이터 복원</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-indigo-200 shadow-md space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-sm font-black text-indigo-900 flex items-center gap-1">🔑 학생 회원 자격 및 계정 정보 보관소</h3>
+                        <button @click="manualCreateStudent" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1 rounded text-xs font-bold hover:bg-indigo-100">+ 신규 학생 수동 계정 생성</button>
+                    </div>
+                    <p class="text-xs text-slate-400">초기 패스워드에서 변경한 학생의 실제 암호가 실시간 연동되어 표기됩니다.</p>
+                    <div class="overflow-x-auto border rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs min-w-[600px]">
+                            <thead>
+                                <tr class="bg-indigo-50 text-indigo-900 font-bold border-b border-indigo-100">
+                                    <th class="p-3">순번</th>
+                                    <th class="p-3">로그인 ID (학번 5자리)</th>
+                                    <th class="p-3">학생 성명</th>
+                                    <th class="p-3">조회용 비밀번호 (실시간 변경 반영됨)</th>
+                                    <th class="p-3">최초 지정 여부</th>
+                                    <th class="p-3 text-center">계정 작업</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y font-mono text-[11px] bg-white">
+                                <tr v-for="(info, id, index) in studentDatabase" :key="id" class="hover:bg-indigo-50/40">
+                                    <td class="p-3 text-slate-400">{{ index + 1 }}</td>
+                                    <td class="p-3 font-bold text-indigo-700 text-sm">{{ id }}</td>
+                                    <td class="p-3 font-bold text-slate-800">{{ info.name }}</td>
+                                    <td class="p-3">
+                                        <span class="bg-slate-100 px-2 py-1 rounded text-slate-700 font-bold border border-slate-200">{{ info.password }}</span>
+                                    </td>
+                                    <td class="p-3">
+                                        <span v-if="info.isInitial" class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">초기 상태 (미변경)</span>
+                                        <span v-else class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold">수정 완료 (매칭됨)</span>
+                                    </td>
+                                    <td class="p-3 text-center">
+                                        <button @click="purgeStudentAccount(id)" class="text-rose-600 font-bold hover:underline">영구 삭제</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="Object.keys(studentDatabase).length === 0">
+                                    <td colspan="6" class="p-6 text-center text-slate-400">등록된 학생 회원이 전무합니다. 학번으로 최초 접속 시 자동 빌드됩니다.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <div class="print-only p-4">
+            <div v-if="printType === 'words'">
+                <h2 class="text-xl font-black text-slate-900 border-b-2 border-slate-900 pb-1">📋 맞춤형 영단어 평가 배포본 교재</h2>
+                <p class="text-xs text-slate-500 mt-1">범위: No. {{ configStartNo }}번 ~ No. {{ configEndNo }}번 (총 {{ filteredWordsByScope.length }}개 수록)</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">번호</th>
+                            <th style="width: 20%;">표제어 (Word)</th>
+                            <th style="width: 10%;">품사</th>
+                            <th style="width: 30%;">한글 의미 (Meaning)</th>
+                            <th style="width: 16%;">유의어</th>
+                            <th style="width: 16%;">반의어</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="w in filteredWordsByScope" :key="w.id">
+                            <td class="font-bold">{{ w.no }}</td>
+                            <td class="text-sm font-black">{{ w.eng }}</td>
+                            <td>{{ w.pos }}</td>
+                            <td class="font-medium text-slate-900">{{ w.kor }}</td>
+                            <td>{{ w.syn || '-' }}</td>
+                            <td>{{ w.ant || '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div v-if="printType === 'wrongs'">
+                <h2 class="text-xl font-black text-rose-700 border-b-2 border-rose-700 pb-1">❌ 학생 개인 날짜별 오답노트 마스터 시트 (Pass 완료 건)</h2>
+                <p class="text-xs text-slate-500 mt-1">이름: {{ studentInfo.name }} | 학번: {{ studentInfo.id }}</p>
+                <div v-for="(wordsList, dateStr) in getStudentWrongCollection" :key="dateStr" class="mt-4">
+                    <h3 class="text-sm font-bold text-slate-800">📌 최종 통과(Pass) 일자: {{ dateStr }}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">단어번호</th>
+                                <th style="width: 25%;">표제어</th>
+                                <th style="width: 12%;">품사</th>
+                                <th style="width: 33%;">정확한 한글 뜻</th>
+                                <th style="width: 20%;">유의어 연계</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="w in wordsList" :key="w.eng">
+                                <td>{{ w.no }}</td>
+                                <td class="font-bold text-sm">{{ w.eng }}</td>
+                                <td>{{ w.pos }}</td>
+                                <td>{{ w.kor }}</td>
+                                <td>{{ w.syn || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-if="printType === 'all_words'">
+                <h2 class="text-xl font-black text-slate-900 border-b-2 border-slate-900 pb-1">📚 중앙 저장 전체 어휘 마스터 레코드 마스터북</h2>
+                <p class="text-xs text-slate-500 mt-1">총 수록 어휘: {{ words.length }}개 일괄 인쇄 트랙</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 8%;">번호</th>
+                            <th style="width: 20%;">표제어(English)</th>
+                            <th style="width: 10%;">품사</th>
+                            <th style="width: 30%;">한글 의미(Meaning)</th>
+                            <th style="width: 16%;">유의어</th>
+                            <th style="width: 16%;">반의어</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="w in words" :key="w.id">
+                            <td class="font-bold text-indigo-700">{{ w.no }}</td>
+                            <td class="font-black text-sm">{{ w.eng }}</td>
+                            <td>{{ w.pos }}</td>
+                            <td>{{ w.kor }}</td>
+                            <td>{{ w.syn || '-' }}</td>
+                            <td>{{ w.ant || '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+// 🔗 [필수 설정] 파이어베이스 연결 정보 구성 (선생님 계정 정보로 변경하세요!)
+const firebaseConfig = {
+  apiKey: "AIzaSyC-UtUHvp4NZPFaxIUIkAL89q2RcleSGyE",
+  authDomain: "words560-646a2.firebaseapp.com",
+  projectId: "words560-646a2",
+  storageBucket: "words560-646a2.firebasestorage.app",
+  messagingSenderId: "366783333850",
+  appId: "1:366783333850:web:02c9e7da7174656089ace3"
+};
+// 파이어베이스 및 파이어스토어 엔진 가동
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+createApp({
+    data() {
+        return {
+            currentView: 'student_login',
+            userRole: 'student',
+            loginId: '',
+            loginPw: '',
+            newPassword: '',
+            teacherPassword: '13579',
+
+            configStartNo: 1,
+            configEndNo: 40,
+
+            studentInfo: { id: '', name: '' },
+            studentDatabase: {},
+            
+            words: [
+                { id: 1, no: 1, eng: 'insecurity', pos: '명사', kor: '불안(감), 불안정', syn: 'anxiety, uncertainty', ant: 'security, confidence' },
+                { id: 2, no: 2, eng: 'influential', pos: '형용사', kor: '영향력 있는', syn: 'powerful, impactful', ant: 'insignificant' },
+                { id: 3, no: 3, eng: 'authority', pos: '명사', kor: '권한, 권위, 당국', syn: 'power, right, command', ant: 'weakness' },
+                { id: 4, no: 4, eng: 'alternative', pos: '명사', kor: '대안, 선택 가능한 것', syn: 'option, substitute', ant: 'necessity' }
+            ],
+
+            cardIdx: 0,
+            isCardFlipped: false,
+            
+            testType: 2,
+            testIdx: 0,
+            activeTestWords: [],
+            testOptions: [],
+            currentCorrectAnswerStr: '',
+            
+            lastTestType: 2,
+            lastTestRangeStr: '',
+            lastEvaluationScore: 0,
+            lastCorrectCount: 0,
+            wrongCollectedWords: [], 
+            reportMenuName: '',
+
+            passOrCutStatus: false,
+            printType: 'words'
+        }
+    },
+    computed: {
+        rangeCount() {
+            if (!this.configStartNo || !this.configEndNo) return 0;
+            return Math.abs(this.configEndNo - this.configStartNo) + 1;
+        },
+        isValidRange() {
+            return this.configStartNo >= 1 && this.configEndNo <= this.words.length && this.configStartNo <= this.configEndNo;
+        },
+        filteredWordsByScope() {
+            let start = Math.min(this.configStartNo, this.configEndNo);
+            let end = Math.max(this.configStartNo, this.configEndNo);
+            return this.words.filter(w => w.no >= start && w.no <= end);
+        },
+        getStudentWrongCollection() {
+            const sId = this.studentInfo.id;
+            if (!sId || !this.studentDatabase[sId]) return {};
+            if (!this.studentDatabase[sId].wrongWordsByDate) {
+                this.studentDatabase[sId].wrongWordsByDate = {};
+            }
+            return this.studentDatabase[sId].wrongWordsByDate;
+        }
+    },
+    async mounted() {
+        // 교사용 내부 비밀번호 설정 로드
+        const localTeacherPw = localStorage.getItem('school_db_teacher_pw');
+        if (localTeacherPw) this.teacherPassword = localTeacherPw;
+
+        try {
+            // 🌐 클라우드에서 실시간 단어장 정보 바인딩
+            const wordsDoc = await db.collection('school_master').doc('words').get();
+            if (wordsDoc.exists && wordsDoc.data().list) {
+                this.words = wordsDoc.data().list;
+            } else {
+                // 클라우드 레코드가 존재하지 않을 시 기본 45개 풀 빌드 후 최초 업로드
+                if (this.words.length < 40) {
+                    for (let i = 5; i <= 45; i++) {
+                        this.words.push({
+                            id: Date.now() + i + Math.random(),
+                            no: i,
+                            eng: `vocabulary_no_${i}`,
+                            pos: i % 2 === 0 ? '명사' : '형용사',
+                            kor: `테스트 기본 내장 단어 뜻 ${i}`,
+                            syn: `synonym_${i}`,
+                            ant: `antonym_${i}`
+                        });
+                    }
+                }
+                await db.collection('school_master').doc('words').set({ list: this.words });
+            }
+
+            // 🌐 클라우드에서 실시간 학생 DB 전체 정보 바인딩
+            const studentsDoc = await db.collection('school_master').doc('students').get();
+            if (studentsDoc.exists && studentsDoc.data().db) {
+                this.studentDatabase = studentsDoc.data().db;
+            }
+        } catch (error) {
+            console.error("초기 클라우드 동기화 바인딩 실패:", error);
+        }
+    },
+    methods: {
+        goHome() {
+            if (this.userRole === 'student' && this.studentInfo.id) this.currentView = 'student_home';
+            if (this.userRole === 'teacher') this.currentView = 'teacher_dashboard';
+        },
+        handleTeacherLogin() {
+            if (this.loginId.trim() === 'teacher' && this.loginPw === this.teacherPassword) {
+                this.userRole = 'teacher';
+                this.currentView = 'teacher_dashboard';
+                this.clearAuthInputs();
+            } else {
+                alert('교사 계정 관리자 인증에 실패했습니다.');
+            }
+        },
+        changeTeacherPassword() {
+            const newPw = prompt('새로운 교사 보안 패스워드를 입력하세요.', this.teacherPassword);
+            if (newPw && newPw.trim().length > 0) {
+                this.teacherPassword = newPw.trim();
+                localStorage.setItem('school_db_teacher_pw', this.teacherPassword);
+                alert('교사 비밀번호가 성공적으로 변경되었습니다.');
+            }
+        },
+        handleStudentLogin() {
+            const sId = this.loginId.trim();
+            if (!/^\d{5}$/.test(sId)) return alert('학번은 숫자 5자리여야 합니다.');
+
+            if (!this.studentDatabase[sId]) {
+                this.studentDatabase[sId] = {
+                    password: sId + '!!',
+                    name: '미등록 학생',
+                    isInitial: true,
+                    progress: {},
+                    wrongWordsByDate: {},
+                    lastActiveTime: '',
+                    passCount: 0
+                };
+                this.syncStudentDb();
+            }
+
+            if (this.loginPw !== this.studentDatabase[sId].password) {
+                return alert('비밀번호가 올바르지 않습니다.');
+            }
+
+            this.userRole = 'student';
+            this.studentInfo.id = sId;
+            this.studentInfo.name = this.studentDatabase[sId].name;
+
+            if (this.studentDatabase[sId].isInitial) {
+                this.currentView = 'change_password';
+            } else {
+                this.currentView = 'student_home';
+            }
+            this.clearAuthInputs();
+        },
+        saveNewPassword() {
+            const sId = this.studentInfo.id;
+            if (!this.studentInfo.name.trim() || this.newPassword.trim().length < 2) {
+                return alert('성명과 변경할 비밀번호를 정확히 기재해 주세요.');
+            }
+            this.studentDatabase[sId].name = this.studentInfo.name.trim();
+            this.studentDatabase[sId].password = this.newPassword.trim();
+            this.studentDatabase[sId].isInitial = false;
+            
+            this.syncStudentDb();
+            this.studentInfo.name = this.studentDatabase[sId].name;
+            alert('정보가 등록되었습니다.');
+            this.currentView = 'student_home';
+        },
+        getStageStatus() {
+            const sId = this.studentInfo.id;
+            if (!sId || !this.studentDatabase[sId]) return { stage1: false, stage2: false, stage3: false, stage4: false };
+            const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
+            if (!this.studentDatabase[sId].progress[rangeKey]) {
+                this.studentDatabase[sId].progress[rangeKey] = { stage1: false, stage2: false, stage3: false, stage4: false };
+                this.syncStudentDb();
+            }
+            return this.studentDatabase[sId].progress[rangeKey];
+        },
+        resetCurrentRangeSequence() {
+            if(confirm('현재 설정 범위의 학습 이수 내역을 초기화하시겠습니까?')) {
+                const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
+                this.studentDatabase[this.studentInfo.id].progress[rangeKey] = { stage1: false, stage2: false, stage3: false, stage4: false };
+                this.syncStudentDb();
+            }
+        },
+        handleStartNoChange() {
+            if (this.configStartNo) {
+                const targetEnd = this.configStartNo + 39;
+                this.configEndNo = Math.min(targetEnd, this.words.length);
+            }
+        },
+        launchFlashcardMode() {
+            if (!this.isValidRange) return alert('범위를 지정하세요.');
+            this.activeTestWords = [...this.filteredWordsByScope].sort((a, b) => a.no - b.no);
+            this.cardIdx = 0;
+            this.isCardFlipped = false;
+            this.currentView = 'flashcard_player';
+            this.stampActiveTimestamp();
+            setTimeout(() => this.speakText(this.activeTestWords[this.cardIdx].eng), 200);
+        },
+        handleCardTapAction() {
+            this.isCardFlipped = !this.isCardFlipped;
+            this.speakText(this.activeTestWords[this.cardIdx].eng);
+        },
+        navigateCard(direction) {
+            this.isCardFlipped = false;
+            let targetIdx = this.cardIdx + direction;
+
+            if (targetIdx >= 0 && targetIdx < this.activeTestWords.length) {
+                this.cardIdx = targetIdx;
+                setTimeout(() => this.speakText(this.activeTestWords[this.cardIdx].eng), 200);
+            } else if (targetIdx >= this.activeTestWords.length) {
+                const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
+                this.studentDatabase[this.studentInfo.id].progress[rangeKey].stage1 = true;
+                this.syncStudentDb();
+                alert('🎉 1단계 학습을 완수했습니다! 다음 단계가 잠금 해제됩니다.');
+                this.currentView = 'student_home';
+            }
+        },
+        speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.rate = 0.95;
+                window.speechSynthesis.speak(u);
+            }
+        },
+        launchTestMode(type) {
+            this.testType = type;
+            this.reportMenuName = type === 2 ? '2단계: 한글 의미 고르기' : type === 3 ? '3단계: 영어 단어 고르기' : '4단계: 유의어 고르기';
+            
+            let shuffledPool = [...this.filteredWordsByScope].sort(() => 0.5 - Math.random());
+            this.activeTestWords = shuffledPool.slice(0, Math.min(20, shuffledPool.length));
+
+            this.testIdx = 0;
+            this.lastCorrectCount = 0;
+            this.wrongCollectedWords = []; 
+            this.buildMultiChoiceOptions();
+            this.stampActiveTimestamp();
+            this.currentView = 'evaluation_engine';
+        },
+        buildMultiChoiceOptions() {
+            const currentItem = this.activeTestWords[this.testIdx];
+            let samePosPool = this.words.filter(w => w.pos === currentItem.pos);
+
+            if (this.testType === 2) {
+                this.currentCorrectAnswerStr = currentItem.kor;
+                let distractors = [...new Set(samePosPool.map(w => w.kor))].filter(k => k !== this.currentCorrectAnswerStr);
+                distractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 4);
+                while (distractors.length < 4) { distractors.push("보기 생성 부족"); }
+                this.testOptions = [this.currentCorrectAnswerStr, ...distractors].sort(() => 0.5 - Math.random());
+                
+            } else if (this.testType === 3) {
+                this.currentCorrectAnswerStr = currentItem.eng;
+                let distractors = [...new Set(samePosPool.map(w => w.eng))].filter(e => e !== this.currentCorrectAnswerStr);
+                distractors = distractors.sort(() => 0.5 - Math.random()).slice(0, 4);
+                while (distractors.length < 4) { distractors.push("dummy_word"); }
+                this.testOptions = [this.currentCorrectAnswerStr, ...distractors].sort(() => 0.5 - Math.random());
+
+            } else if (this.testType === 4) {
+                if (!currentItem.syn || currentItem.syn.trim() === "") {
+                    this.currentCorrectAnswerStr = "N/A(유의어없음)";
+                } else {
+                    let tokens = currentItem.syn.split(/[,;]/).map(s => s.trim()).filter(s => s);
+                    this.currentCorrectAnswerStr = tokens[0];
+                }
+
+                let wrongTokens = [];
+                samePosPool.forEach(w => {
+                    if (w.eng !== currentItem.eng) wrongTokens.push(w.eng);
+                    if (w.syn) w.syn.split(/[,;]/).forEach(s => wrongTokens.push(s.trim()));
+                });
+                wrongTokens = [...new Set(wrongTokens)].filter(t => t && t !== this.currentCorrectAnswerStr && t !== currentItem.eng);
+                let distractors = wrongTokens.sort(() => 0.5 - Math.random()).slice(0, 4);
+                while (distractors.length < 4) { distractors.push("syn_dummy"); }
+                this.testOptions = [this.currentCorrectAnswerStr, ...distractors].sort(() => 0.5 - Math.random());
+            }
+        },
+        submitOptionChoice(chosen) {
+            const currentItem = this.activeTestWords[this.testIdx];
+            const sId = this.studentInfo.id;
+            
+            if (chosen === this.currentCorrectAnswerStr) {
+                this.lastCorrectCount++;
+            } else {
+                this.wrongCollectedWords.push(currentItem);
+            }
+
+            if (this.testIdx < this.activeTestWords.length - 1) {
+                this.testIdx++;
+                this.buildMultiChoiceOptions();
+            } else {
+                this.lastEvaluationScore = Math.round((this.lastCorrectCount / this.activeTestWords.length) * 100);
+                this.passOrCutStatus = (this.lastEvaluationScore >= 80);
+                this.lastTestType = this.testType;
+                this.lastTestRangeStr = `${this.configStartNo}번 ~ ${this.configEndNo}번`;
+
+                if (this.passOrCutStatus) {
+                    if (!this.studentDatabase[sId].passCount) {
+                        this.studentDatabase[sId].passCount = 0;
+                    }
+                    this.studentDatabase[sId].passCount++;
+
+                    if (this.wrongCollectedWords.length > 0) {
+                        const dObj = new Date();
+                        const dateKey = `${dObj.getFullYear()}-${String(dObj.getMonth()+1).padStart(2,'0')}-${String(dObj.getDate()).padStart(2,'0')}`;
+                        
+                        if (!this.studentDatabase[sId].wrongWordsByDate) {
+                            this.studentDatabase[sId].wrongWordsByDate = {};
+                        }
+                        if (!this.studentDatabase[sId].wrongWordsByDate[dateKey]) {
+                            this.studentDatabase[sId].wrongWordsByDate[dateKey] = [];
+                        }
+                        
+                        this.wrongCollectedWords.forEach(w => {
+                            if (!this.studentDatabase[sId].wrongWordsByDate[dateKey].some(item => item.eng === w.eng)) {
+                                this.studentDatabase[sId].wrongWordsByDate[dateKey].push({
+                                    no: w.no, eng: w.eng, pos: w.pos, kor: w.kor, syn: w.syn, ant: w.ant
+                                });
+                            }
+                        });
+                    }
+                }
+
+                const rangeKey = `R_${this.configStartNo}_${this.configEndNo}`;
+                if (!this.studentDatabase[sId].progress[rangeKey]) {
+                    this.studentDatabase[sId].progress[rangeKey] = { stage1: true, stage2: false, stage3: false, stage4: false };
+                }
+                
+                if (this.testType === 2) {
+                    this.studentDatabase[sId].progress[rangeKey].stage2Score = this.lastEvaluationScore;
+                    if (this.passOrCutStatus) this.studentDatabase[sId].progress[rangeKey].stage2 = true;
+                }
+                if (this.testType === 3) {
+                    this.studentDatabase[sId].progress[rangeKey].stage3Score = this.lastEvaluationScore;
+                    if (this.passOrCutStatus) this.studentDatabase[sId].progress[rangeKey].stage3 = true;
+                }
+                if (this.testType === 4) {
+                    this.studentDatabase[sId].progress[rangeKey].stage4Score = this.lastEvaluationScore;
+                    if (this.passOrCutStatus) this.studentDatabase[sId].progress[rangeKey].stage4 = true;
+                }
+
+                this.stampActiveTimestamp();
+                this.syncStudentDb();
+                this.currentView = 'evaluation_report';
+            }
+        },
+        retryCurrentTestSession() { this.launchTestMode(this.lastTestType); },
+        printVocabularySheet(mode) {
+            this.printType = mode;
+            setTimeout(() => { window.print(); }, 300);
+        },
+        downloadWordsExcel() {
+            let csvContent = "\uFEFF번호,표제어,품사,한글의미,유의어,반의어\n";
+            this.words.forEach(w => {
+                csvContent += `${w.no},"${w.eng}","${w.pos}","${w.kor}","${w.syn || ''}","${w.ant || ''}"\n`;
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", "고1_영단어_560_마스터_어휘목록.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        },
+        stampActiveTimestamp() {
+            const sId = this.studentInfo.id;
+            if (sId && this.studentDatabase[sId]) {
+                const d = new Date();
+                const count = this.studentDatabase[sId].passCount || 0;
+                this.studentDatabase[sId].lastActiveTime = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}. ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}(${count}회)`;
+            }
+        },
+        parseUploadedCsv(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target.result;
+                if (!content) {
+                    alert("파일 내용을 읽을 수 없습니다.");
+                    return;
+                }
+                const lines = content.split(/\r?\n/);
+                let chunkContainer = [];
+                let delimiter = ',';
+                if (lines.length > 0 && lines[0].includes(';')) {
+                    delimiter = ';';
+                }
+
+                for (let i = 1; i < lines.length; i++) {
+                    const rowRaw = lines[i].trim();
+                    if (!rowRaw) continue;
+                    
+                    let cols = [];
+                    let insideQuote = false;
+                    let currentColumn = '';
+                    
+                    for (let j = 0; j < rowRaw.length; j++) {
+                        let char = rowRaw[j];
+                        if (char === '"') {
+                            insideQuote = !insideQuote;
+                        } else if (char === delimiter && !insideQuote) {
+                            cols.push(currentColumn.trim());
+                            currentColumn = '';
+                        } else {
+                            currentColumn += char;
+                        }
+                    }
+                    cols.push(currentColumn.trim());
+                    cols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+
+                    if (cols.length >= 2 && cols[1]) {
+                        chunkContainer.push({
+                            id: Date.now() + i + Math.random(),
+                            no: parseInt(cols[0]) || i,
+                            eng: cols[1],
+                            pos: cols[2] || '단어',
+                            kor: cols[3] || cols[2] || '뜻 없음',
+                            syn: cols[4] || '',
+                            ant: cols[5] || ''
+                        });
+                    }
+                }
+                if (chunkContainer.length > 0) {
+                    this.words = chunkContainer.sort((a,b) => a.no - b.no);
+                    // 🌐 로컬 저장 장치 대신 파이어베이스 클라우드로 동시 전송
+                    await this.syncWordsDb();
+                    this.configStartNo = 1;
+                    this.configEndNo = Math.min(40, this.words.length);
+                    alert(`🎉 성공: 총 ${this.words.length}개의 어휘 데이터가 온라인 클라우드에 업로드 및 동기화되었습니다!`);
+                    event.target.value = '';
+                } else {
+                    alert("⚠️ 올바른 CSV 파일 양식이 아닙니다. [번호, 표제어, 품사, 한글의미] 구조인지 검토해 주세요.");
+                }
+            };
+            reader.readAsText(file, 'UTF-8'); 
+        },
+        manualCreateStudent() {
+            const sId = prompt('생성할 학생의 5자리 학번 코드를 입력하세요.');
+            if (!sId || !/^\d{5}$/.test(sId)) return alert('학번은 5자리 숫자만 가능합니다.');
+            const sName = prompt('학생 성명을 입력하세요.');
+            if (!sName) return;
+            this.studentDatabase[sId] = { password: sId + '!!', name: sName, isInitial: false, progress: {}, wrongWordsByDate: {}, lastActiveTime: '', passCount: 0 };
+            this.syncStudentDb();
+        },
+        purgeStudentAccount(id) {
+            if (confirm(`학번 [ ${id} ] 학생 정보를 시스템에서 영구 파기합니까?`)) {
+                delete this.studentDatabase[id];
+                this.syncStudentDb();
+            }
+        },
+        async deleteWordToken(id) {
+            this.words = this.words.filter(w => w.id !== id);
+            await this.syncWordsDb(); // 🌐 클라우드 데이터 실시간 동기화
+        },
+        async restoreMockTemplate() {
+            if(confirm('중앙 어휘를 기본 샘플 4개 상태로 리셋하겠습니까?')) {
+                try {
+                    // 🌐 로컬이 아닌 파이어베이스 클라우드에서 단어 데이터를 삭제합니다.
+                    await db.collection('school_master').doc('words').delete();
+                    location.reload();
+                } catch (error) {
+                    alert("리셋 실패: " + error.message);
+                }
+            }
+        },
+        // 🌐 학생 디비 정보 클라우드 전송 함수
+        async syncStudentDb() {
+            try {
+                await db.collection('school_master').doc('students').set({ db: this.studentDatabase });
+            } catch (error) {
+                console.error("학생 정보 클라우드 전송 실패:", error);
+            }
+        },
+        // 🌐 단어 마스터 레코드 정보 클라우드 전송 함수
+        async syncWordsDb() {
+            try {
+                await db.collection('school_master').doc('words').set({ list: this.words });
+                console.log("단어 목록이 클라우드에 저장되었습니다.");
+            } catch (error) {
+                console.error("단어 목록 클라우드 전송 실패:", error);
+            }
+        },
+        clearAuthInputs() { this.loginId = ''; this.loginPw = ''; this.newPassword = ''; },
+        logout() {
+            this.userRole = 'student';
+            this.studentInfo = { id: '', name: '' };
+            this.currentView = 'student_login';
+            this.clearAuthInputs();
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
