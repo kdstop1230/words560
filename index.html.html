@@ -40,16 +40,16 @@
         <div v-if="currentView === 'student_login'" class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
             <div>
                 <h2 class="text-2xl font-black text-indigo-700 tracking-tight">🏫 고1 영단어 560 마스터</h2>
-                <p class="text-xs text-slate-400 mt-1.5">5자리 또는 4자리 학번 코드로 로그인하세요.</p>
+                <p class="text-xs text-slate-400 mt-1.5">5자리 학번 코드로 로그인하세요.</p>
             </div>
             <div class="space-y-4 text-left">
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">학번 입력 (예: 10101 또는 1101)</label>
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" v-model="loginId" placeholder="예: 10101" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm bg-slate-50">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">5자리 학번 입력</label>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" id="studentLoginIdInput" v-model="loginId" placeholder="예: 10101" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-sm bg-slate-50">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">비밀번호 (초기: 학번!!)</label>
-                    <input type="password" v-model="loginPw" placeholder="••••••••" autocapitalize="off" autocorrect="off" spellcheck="false" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-slate-50" @keyup.enter="handleStudentLogin">
+                    <input type="password" v-model="loginPw" placeholder="••••••••" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm bg-slate-50" @keyup.enter="handleStudentLogin">
                 </div>
                 <button @click="handleStudentLogin" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold transition shadow-md text-sm">학생 공간 입장</button>
             </div>
@@ -72,7 +72,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">보안 패스워드</label>
-                    <input type="password" v-model="loginPw" placeholder="••••••••" autocapitalize="off" autocorrect="off" spellcheck="false" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-800 text-sm bg-slate-50" @keyup.enter="handleTeacherLogin">
+                    <input type="password" v-model="loginPw" placeholder="••••••••" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-slate-800 text-sm bg-slate-50" @keyup.enter="handleTeacherLogin">
                 </div>
                 <button @click="handleTeacherLogin" class="w-full bg-slate-900 hover:bg-black text-white py-3.5 rounded-xl font-bold transition shadow-md text-sm">관리자 검증 및 입장</button>
             </div>
@@ -95,7 +95,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-500 mb-1">보안 비밀번호 변경</label>
-                    <input type="password" v-model="newPassword" placeholder="새 암호 입력" autocapitalize="off" autocorrect="off" spellcheck="false" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="password" v-model="newPassword" placeholder="새 암호 입력" class="w-full p-3 border rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
                 </div>
                 <button @click="saveNewPassword" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold transition text-sm shadow">정보 저장 및 마스터 허브 진입</button>
             </div>
@@ -327,33 +327,33 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y font-mono text-[11px]">
-                                <tr v-for="item in paginatedStudentLogList" :key="item.id" class="hover:bg-slate-50">
-                                    <td class="p-3 font-bold text-indigo-600">{{ item.id }}</td>
-                                    <td class="p-3 font-medium text-slate-800">{{ item.name }}</td>
-                                    <td class="p-3 text-slate-600 font-bold">{{ item.lastActiveTime || '기록 없음' }}</td>
+                                <tr v-for="student in paginatedArchiveStudents" :key="student.id" class="hover:bg-slate-50">
+                                    <td class="p-3 font-bold text-indigo-600">{{ student.id }}</td>
+                                    <td class="p-3 font-medium text-slate-800">{{ student.name }}</td>
+                                    <td class="p-3 text-slate-600 font-bold">{{ student.lastActiveTime || '기록 없음' }}</td>
                                     <td class="p-3">
                                         <div class="max-w-xs max-h-24 overflow-y-auto space-y-1 bg-slate-50 p-1.5 rounded border">
-                                            <div v-for="(wordsList, dateKey) in item.wrongWordsByDate" :key="dateKey" class="text-[10px]">
+                                            <div v-for="(wordsList, dateKey) in student.wrongWordsByDate" :key="dateKey" class="text-[10px]">
                                                 <span class="text-rose-600 font-bold">[{{ dateKey }}]</span> 
                                                 {{ wordsList.map(w => w.eng).join(', ') }}
                                             </div>
-                                            <div v-if="!item.wrongWordsByDate || Object.keys(item.wrongWordsByDate).length === 0" class="text-[10px] text-slate-400">오답 없음</div>
+                                            <div v-if="!student.wrongWordsByDate || Object.keys(student.wrongWordsByDate).length === 0" class="text-[10px] text-slate-400">오답 없음</div>
                                         </div>
                                     </td>
                                     <td class="p-3 text-center">
-                                        <button @click="purgeStudentAccount(item.id)" class="text-rose-600 font-bold hover:underline">학적제외</button>
+                                        <button @click="purgeStudentAccount(student.id)" class="text-rose-600 font-bold hover:underline">학적제외</button>
                                     </td>
                                 </tr>
-                                <tr v-if="paginatedStudentLogList.length === 0">
-                                    <td colspan="5" class="p-6 text-center text-slate-400 text-xs">등록된 학생 기록이 없습니다.</td>
-                                </tr>
+                                <tr v-if="paginatedArchiveStudents.length === 0">
+                                    <td colspan="5" class="p-6 text-center text-slate-400">등록된 이수 내역이 없습니다.</td>
+                                end	</tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="flex justify-center items-center gap-4 pt-2 no-print">
-                        <button @click="logCurrentPage = Math.max(1, logCurrentPage - 1)" :disabled="logCurrentPage === 1" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold disabled:opacity-40 transition">이전</button>
-                        <span class="text-xs font-bold font-mono text-slate-600">{{ logCurrentPage }} / {{ logTotalPages }} 페이지</span>
-                        <button @click="logCurrentPage = Math.min(logTotalPages, logCurrentPage + 1)" :disabled="logCurrentPage === logTotalPages" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold disabled:opacity-40 transition">다음</button>
+                    <div class="flex justify-center items-center gap-4 pt-3">
+                        <button @click="teacherArchivePage = Math.max(1, teacherArchivePage - 1)" :disabled="teacherArchivePage === 1" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-bold disabled:opacity-40 transition">이전 페이지</button>
+                        <span class="text-xs font-bold text-slate-600 font-mono">{{ teacherArchivePage }} / {{ teacherArchiveTotalPages }} 페이지</span>
+                        <button @click="teacherArchivePage = Math.min(teacherArchiveTotalPages, teacherArchivePage + 1)" :disabled="teacherArchivePage === teacherArchiveTotalPages" class="px-3 py-1 bg-slate-200 hover:bg-slate-300 rounded text-xs font-bold disabled:opacity-40 transition">다음 페이지</button>
                     </div>
                 </div>
 
@@ -402,25 +402,30 @@
                 <div class="bg-white p-5 rounded-2xl border border-indigo-200 shadow-md space-y-3">
                     <div class="flex justify-between items-center flex-wrap gap-2">
                         <h3 class="text-sm font-black text-indigo-900 flex items-center gap-1">🔑 학생 회원 자격 및 계정 정보 보관소</h3>
-                        <div class="flex gap-2 flex-wrap items-center">
-                            <div class="flex items-center gap-1 bg-slate-100 border border-slate-300 rounded-xl px-2.5 py-1">
-                                <input type="text" v-model="studentSearchQuery" placeholder="학번 검색" class="outline-none text-xs w-24 bg-transparent font-mono" @keyup.enter="applyStudentSearch">
-                                <button @click="applyStudentSearch" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded-lg text-[11px] font-bold transition">검색</button>
-                                <button v-if="filterSearchQuery" @click="clearStudentSearch" class="text-slate-400 hover:text-slate-600 text-xs font-bold px-1">X</button>
-                            </div>
+                        <div class="flex gap-2 flex-wrap">
                             <button @click="manualCreateStudent" class="bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-indigo-100">+ 신규 계정 생성</button>
                             <button @click="deleteSelectedStudents" class="bg-rose-50 border border-rose-200 text-rose-700 px-2.5 py-1 rounded text-xs font-bold hover:bg-rose-100">🗑️ 선택 삭제</button>
                             <button @click="clearAllStudents" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold hover:bg-red-700">💥 전체 초기화</button>
                         </div>
                     </div>
                     <p class="text-xs text-slate-400">초기 패스워드에서 변경한 학생의 실제 암호가 실시간 연동되어 표기됩니다.</p>
+                    
+                    <div class="flex flex-wrap items-center gap-2 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 text-xs">
+                        <span class="font-bold text-indigo-900">🔍 학생 학번 검색:</span>
+                        <input type="text" v-model="studentSearchId" placeholder="검색할 5자리 학번 입력" class="p-1.5 border border-indigo-200 rounded-lg font-bold font-mono outline-none focus:ring-2 focus:ring-indigo-500 w-44 bg-white text-slate-800">
+                        <button @click="studentSearchId = studentSearchId.trim()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-indigo-700 transition shadow-sm">검색</button>
+                        <button @click="studentSearchId = ''" class="bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-bold hover:bg-slate-300 transition">전체보기 (초기화)</button>
+                    </div>
+
                     <div class="overflow-x-auto border rounded-xl">
                         <table class="w-full text-left border-collapse text-xs min-w-[600px]">
                             <thead>
                                 <tr class="bg-indigo-50 text-indigo-900 font-bold border-b border-indigo-100">
-                                    <th class="p-3 w-16 text-center flex items-center justify-center gap-1">
-                                        <span>선택</span>
-                                        <input type="checkbox" :checked="isAllVisibleSelected" @change="toggleSelectAllVisibleStudents" class="w-3.5 h-3.5 accent-indigo-600 cursor-pointer">
+                                    <th class="p-3 w-20 text-center">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <span>선택</span>
+                                            <input type="checkbox" @change="toggleSelectAllStudents($event)" :checked="isAllStudentsSelected" class="w-3.5 h-3.5 accent-indigo-600 cursor-pointer">
+                                        </div>
                                     </th>
                                     <th class="p-3">순번</th>
                                     <th class="p-3">로그인 ID (학번 5자리)</th>
@@ -431,26 +436,26 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y font-mono text-[11px] bg-white">
-                                <tr v-for="(item, index) in filteredStudentAccountList" :key="item.id" class="hover:bg-indigo-50/40">
+                                <tr v-for="(student, index) in filteredRepositoryStudents" :key="student.id" class="hover:bg-indigo-50/40">
                                     <td class="p-3 text-center">
-                                        <input type="checkbox" :value="item.id" v-model="selectedStudents" class="w-4 h-4 accent-indigo-600 cursor-pointer">
+                                        <input type="checkbox" :value="student.id" v-model="selectedStudents" class="w-4 h-4 accent-indigo-600 cursor-pointer">
                                     </td>
                                     <td class="p-3 text-slate-400">{{ index + 1 }}</td>
-                                    <td class="p-3 font-bold text-indigo-700 text-sm">{{ item.id }}</td>
-                                    <td class="p-3 font-bold text-slate-800">{{ item.name }}</td>
+                                    <td class="p-3 font-bold text-indigo-700 text-sm">{{ student.id }}</td>
+                                    <td class="p-3 font-bold text-slate-800">{{ student.name }}</td>
                                     <td class="p-3">
-                                        <span class="bg-slate-100 px-2 py-1 rounded text-slate-700 font-bold border border-slate-200">{{ item.password }}</span>
+                                        <span class="bg-slate-100 px-2 py-1 rounded text-slate-700 font-bold border border-slate-200">{{ student.password }}</span>
                                     </td>
                                     <td class="p-3">
-                                        <span v-if="item.isInitial" class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">초기 상태 (미변경)</span>
+                                        <span v-if="student.isInitial" class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded font-bold">초기 상태 (미변경)</span>
                                         <span v-else class="bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold">수정 완료 (매칭됨)</span>
                                     </td>
                                     <td class="p-3 text-center">
-                                        <button @click="purgeStudentAccount(item.id)" class="text-rose-600 font-bold hover:underline">영구 삭제</button>
+                                        <button @click="purgeStudentAccount(student.id)" class="text-rose-600 font-bold hover:underline">영구 삭제</button>
                                     </td>
                                 </tr>
-                                <tr v-if="filteredStudentAccountList.length === 0">
-                                    <td colspan="7" class="p-6 text-center text-slate-400">조회 및 일치하는 학생 정보가 보관소에 존재하지 않습니다.</td>
+                                <tr v-if="filteredRepositoryStudents.length === 0">
+                                    <td colspan="7" class="p-6 text-center text-slate-400">등록되었거나 검색 조건에 맞는 학생 회원이 없습니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -570,7 +575,7 @@ createApp({
             loginId: '',
             loginPw: '',
             newPassword: '',
-            teacherPassword: '13579', 
+            teacherPassword: '13579',
 
             configStartNo: 1,
             configEndNo: 40,
@@ -605,10 +610,10 @@ createApp({
             passOrCutStatus: false,
             printType: 'words',
 
-            // [추가 통제 데이터 변수]
-            logCurrentPage: 1,
-            studentSearchQuery: '',
-            filterSearchQuery: ''
+            // [기능 추가] 관리자 전용 제어 상태값 데이터 정의
+            teacherArchivePage: 1,
+            teacherArchivePerPage: 20,
+            studentSearchId: ''
         }
     },
     computed: {
@@ -633,51 +638,49 @@ createApp({
             return this.studentDatabase[sId].wrongWordsByDate;
         },
         
-        // [새로운 연산 수식] 누가기록 전용 학생 배열 변환 및 학번 정렬
-        studentLogList() {
-            return Object.entries(this.studentDatabase).map(([id, info]) => {
-                return { id, ...info };
-            }).sort((a, b) => a.id.localeCompare(b.id));
+        // [기능 추가된 계산식 1] 이수현황 목록을 20건씩 나누어 반환하고 학번 정렬 적용
+        paginatedArchiveStudents() {
+            const list = Object.entries(this.studentDatabase).map(([id, info]) => ({ id, ...info }));
+            list.sort((a, b) => a.id.localeCompare(b.id));
+            const start = (this.teacherArchivePage - 1) * this.teacherArchivePerPage;
+            const end = start + this.teacherArchivePerPage;
+            return list.slice(start, end);
         },
-        // [새로운 연산 수식] 1페이지당 20건 슬라이싱 계산
-        paginatedStudentLogList() {
-            const start = (this.logCurrentPage - 1) * 20;
-            const end = this.logCurrentPage * 20;
-            return this.studentLogList.slice(start, end);
+        // [기능 추가된 계산식 2] 이수현황 총 페이지 개수 계산
+        teacherArchiveTotalPages() {
+            const count = Object.keys(this.studentDatabase).length;
+            return Math.ceil(count / this.teacherArchivePerPage) || 1;
         },
-        // [새로운 연산 수식] 누가기록 총 페이지 개수 산출
-        logTotalPages() {
-            return Math.ceil(this.studentLogList.length / 20) || 1;
-        },
-        // [새로운 연산 수식] 보관소 전용 검색 결과 반영 필터링 연산
-        filteredStudentAccountList() {
-            let list = Object.entries(this.studentDatabase).map(([id, info]) => {
-                return { id, ...info };
-            }).sort((a, b) => a.id.localeCompare(b.id));
-
-            if (this.filterSearchQuery) {
-                list = list.filter(item => item.id.includes(this.filterSearchQuery));
+        // [기능 추가된 계산식 3] 학번 검색 필터가 적용된 보관소 리스트 빌드
+        filteredRepositoryStudents() {
+            const list = Object.entries(this.studentDatabase).map(([id, info]) => ({ id, ...info }));
+            list.sort((a, b) => a.id.localeCompare(b.id));
+            if (this.studentSearchId.trim()) {
+                const search = this.studentSearchId.trim();
+                return list.filter(student => student.id.includes(search));
             }
             return list;
         },
-        // [새로운 연산 수식] 현재 화면에 표시된 모든 학생이 체크되었는지 판별
-        isAllVisibleSelected() {
-            if (this.filteredStudentAccountList.length === 0) return false;
-            return this.filteredStudentAccountList.every(item => this.selectedStudents.includes(item.id));
+        // [기능 추가된 계산식 4] 현재 노출된 검색/전체 리스트가 모두 체크박스 선택되었는지 판단
+        isAllStudentsSelected() {
+            if (this.filteredRepositoryStudents.length === 0) return false;
+            return this.filteredRepositoryStudents.every(s => this.selectedStudents.includes(s.id));
         }
     },
     async mounted() {
+        const allowedHosts = ["kdstop1230.github.io", "localhost", "127.0.0.1"];
+        if (!allowedHosts.includes(window.location.hostname)) {
+            alert("🚨 보안 경고: 승인되지 않은 환경 또는 변조된 소스코드에서의 접근이 감지되었습니다. 클라우드 통신 및 데이터베이스 연동이 차단됩니다.");
+            this.studentDatabase = {};
+            this.words = [];
+            this.currentView = 'student_login';
+            return;
+        }
+
         const localTeacherPw = localStorage.getItem('school_db_teacher_pw');
         if (localTeacherPw) this.teacherPassword = localTeacherPw;
 
         try {
-            const adminDoc = await db.collection('school_master').doc('admin').get();
-            if (adminDoc.exists && adminDoc.data().teacherPassword) {
-                this.teacherPassword = adminDoc.data().teacherPassword;
-            } else {
-                await db.collection('school_master').doc('admin').set({ teacherPassword: this.teacherPassword });
-            }
-
             const wordsDoc = await db.collection('school_master').doc('words').get();
             if (wordsDoc.exists && wordsDoc.data().list) {
                 this.words = wordsDoc.data().list;
@@ -716,7 +719,7 @@ createApp({
             if (this.userRole === 'teacher') this.currentView = 'teacher_dashboard';
         },
         handleTeacherLogin() {
-            if (this.loginId.trim() === 'teacher' && this.loginPw.toString().trim() === this.teacherPassword.toString().trim()) {
+            if (this.loginId.trim() === 'teacher' && this.loginPw === this.teacherPassword) {
                 this.userRole = 'teacher';
                 this.currentView = 'teacher_dashboard';
                 this.clearAuthInputs();
@@ -724,31 +727,28 @@ createApp({
                 alert('교사 계정 관리자 인증에 실패했습니다.');
             }
         },
-        async changeTeacherPassword() {
+        changeTeacherPassword() {
             const newPw = prompt('새로운 교사 보안 패스워드를 입력하세요.', this.teacherPassword);
             if (newPw && newPw.trim().length > 0) {
                 this.teacherPassword = newPw.trim();
                 localStorage.setItem('school_db_teacher_pw', this.teacherPassword);
-                try {
-                    await db.collection('school_master').doc('admin').set({ teacherPassword: this.teacherPassword });
-                    alert('교사 비밀번호가 성공적으로 변경되어 모든 기기에 동기화되었습니다.');
-                } catch (error) {
-                    alert('클라우드 비밀번호 저장 실패: ' + error.message);
-                }
+                alert('교사 비밀번호가 성공적으로 변경되었습니다.');
             }
         },
         async handleStudentLogin() {
-            let sId = this.loginId.toString().trim();
-            sId = sId.replace(/[０-智慧]/g, function(s) {
+            const rawInput = document.getElementById('studentLoginIdInput')?.value || this.loginId;
+            let sId = rawInput.toString().trim();
+            
+            sId = sId.replace(/[０-９]/g, function(s) {
                 return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
             });
             sId = sId.replace(/\D/g, ''); 
 
-            if (sId.length === 4) {
-                sId = sId.charAt(0) + '0' + sId.substring(1);
-            }
+            this.loginId = sId;
 
-            if (!/^\d{5}$/.test(sId)) return alert('학번을 10101과 같이 5자리 숫자로 입력해 주세요.');
+            if (!/^\d{5}$/.test(sId)) {
+                return alert(`학번 입력 오류: 현재 시스템이 [${sId || '공백'}]으로 처리했습니다.\n학번은 반드시 '10101'과 같이 정확히 '숫자 5자리'여야 합니다. 잘못된 문자나 6자리 이상의 숫자가 들어갔는지 확인해 주세요.`);
+            }
 
             try {
                 const studentsDoc = await db.collection('school_master').doc('students').get();
@@ -772,8 +772,8 @@ createApp({
                 await this.syncStudentDb();
             }
 
-            // [오류 해결 완료] 비밀번호 대조 시 양쪽 트림 처리를 강화하여 모바일 기기 공백 에러 제거
-            if (this.loginPw.toString().trim() !== this.studentDatabase[sId].password.toString().trim()) {
+            // 🔒 [보안 및 로그인 오류 해결 패치] 모바일 기기의 패스워드 끝 공백 자동 완성을 무력화하기 위해 trim()으로 정확하게 대조 처리합니다.
+            if (this.loginPw.trim() !== this.studentDatabase[sId].password.trim()) {
                 return alert('비밀번호가 올바르지 않습니다.');
             }
 
@@ -808,8 +808,7 @@ createApp({
             }
 
             this.studentDatabase[sId].name = this.studentInfo.name.trim();
-            // [오류 해결 완료] 등록 시 비밀번호 공백을 완벽하게 절삭 처리하여 데이터 위변조 예방
-            this.studentDatabase[sId].password = this.newPassword.toString().trim();
+            this.studentDatabase[sId].password = this.newPassword.trim();
             this.studentDatabase[sId].isInitial = false;
             
             await this.syncStudentDb();
@@ -1161,22 +1160,21 @@ createApp({
             this.clearAuthInputs();
         },
 
-        // [기능추가 2] 학생 ID(학번) 검색 실행 메서드
-        applyStudentSearch() {
-            this.filterSearchQuery = this.studentSearchQuery.trim();
-        },
-        // [기능추가 2] 검색 필터링 제거 메서드
-        clearStudentSearch() {
-            this.studentSearchQuery = '';
-            this.filterSearchQuery = '';
-        },
-        // [기능추가 2] 체크박스 전체 선택 토글 기능 메서드
-        toggleSelectAllVisibleStudents(event) {
-            const visibleIds = this.filteredStudentAccountList.map(item => item.id);
+        // [기능 추가된 메서드 1] 전체 선택 / 해제 토글 처리 (필터링된 리스트 기준 연동)
+        toggleSelectAllStudents(event) {
             if (event.target.checked) {
-                this.selectedStudents = [...new Set([...this.selectedStudents, ...visibleIds])];
+                this.filteredRepositoryStudents.forEach(s => {
+                    if (!this.selectedStudents.includes(s.id)) {
+                        this.selectedStudents.push(s.id);
+                    }
+                });
             } else {
-                this.selectedStudents = this.selectedStudents.filter(id => !visibleIds.includes(id));
+                this.filteredRepositoryStudents.forEach(s => {
+                    const idx = this.selectedStudents.indexOf(s.id);
+                    if (idx > -1) {
+                        this.selectedStudents.splice(idx, 1);
+                    }
+                });
             }
         }
     }
